@@ -1,9 +1,5 @@
 from ultralytics import YOLO
-import matplotlib.pyplot as plt
-import time
-import cv2
-import pafy
-import numpy as np
+
 
 model = YOLO('yolov8n.pt')
 
