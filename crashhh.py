@@ -4,9 +4,9 @@ from ultralytics import YOLO
 import cvzone
 import time
 from datetime import datetime
-import os  
+import os
 
-def detect_accidents(video_path, output_video_name, model_path='best.pt', class_list_path='coco1.txt'):
+def detect_accidents(video_path, model_path='best.pt', class_list_path='coco1.txt'):
     model = YOLO(model_path)
 
     def RGB(event, x, y, flags, param):
@@ -65,9 +65,13 @@ def detect_accidents(video_path, output_video_name, model_path='best.pt', class_
         if cv2.waitKey(1) & 0xFF == 27:
             break
 
-    # Save frames to a video file
+    # Save frames to a new video file with a timestamp in the filename
     if accident_frames:
-        output_video_path = os.path.abspath(output_video_name)  # Create an absolute file path
+        output_folder = "violations"
+        os.makedirs(output_folder, exist_ok=True)  # Create the "violations" folder if it doesn't exist
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_video_name = f"accident_clip_{timestamp}.mp4"
+        output_video_path = os.path.abspath(os.path.join(output_folder, output_video_name))  # Create an absolute file path inside the "violations" folder
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         out = cv2.VideoWriter(output_video_path, fourcc, 3.0, (1020, 500))
         for frame in accident_frames:
@@ -82,6 +86,6 @@ def detect_accidents(video_path, output_video_name, model_path='best.pt', class_
     return info_list
 
 # Example usage
-result_info = detect_accidents('cr4.mp4', 'accident_clip.mp4')
+result_info = detect_accidents('cr4.mp4')
 print(result_info)
 
