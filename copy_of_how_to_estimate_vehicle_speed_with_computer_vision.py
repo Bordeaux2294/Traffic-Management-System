@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 import supervision as sv
@@ -8,7 +9,7 @@ from supervision.assets import VideoAssets, download_assets
 from collections import defaultdict, deque
 from datetime import datetime
 
-def process_video(source_video_path, target_video_path, confidence_threshold, iou_threshold, model_name, model_resolution, source, target, target_width, target_height):
+def process_video(source_video_path, confidence_threshold, iou_threshold, model_name, model_resolution, source, target, target_width, target_height, violations_folder):
     # Initialize view transformer
     class ViewTransformer:
         def __init__(self, source, target):
@@ -43,8 +44,13 @@ def process_video(source_video_path, target_video_path, confidence_threshold, io
     polygon_zone = sv.PolygonZone(polygon=source, frame_resolution_wh=video_info.resolution_wh)
     coordinates = defaultdict(lambda: deque(maxlen=video_info.fps))
 
+    os.makedirs(violations_folder, exist_ok=True)
+
+    current_time = datetime.now().strftime("%Y%m%d%H%M%S")
+    output_video_path = os.path.join(violations_folder, f"speeding_{current_time}.mp4")
+
     # Open target video
-    with sv.VideoSink(target_video_path, video_info) as sink:
+    with sv.VideoSink(output_video_path, video_info) as sink:
         # Loop over source video frames
         for frame in tqdm(frame_generator, total=video_info.total_frames):
             result = model(frame, imgsz=model_resolution, verbose=False)[0]
@@ -99,12 +105,11 @@ def process_video(source_video_path, target_video_path, confidence_threshold, io
             sink.write_frame(annotated_frame)
 
     # Returning the required information
-    info_list = ["road3.mp4", "speeding", "Kingston", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "C:\\Users\\chels\\Downloads\\vehicles-result.mp4"]
+    info_list = [source_video_path, "speeding", "Kingston", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), output_video_path]
     return info_list
 
 # Parameters
 SOURCE_VIDEO_PATH = "road3.mp4"
-TARGET_VIDEO_PATH = "vehicles-result.mp4"
 CONFIDENCE_THRESHOLD = 0.3
 IOU_THRESHOLD = 0.5
 MODEL_NAME = "yolov8x.pt"
@@ -113,7 +118,9 @@ SOURCE = np.array([[290, 0], [0, 700], [1200, 700], [1200, 0]])
 TARGET_WIDTH = 1280
 TARGET_HEIGHT = 700
 TARGET = np.array([[0, 0], [TARGET_WIDTH - 1, 0], [TARGET_WIDTH - 1, TARGET_HEIGHT - 1], [0, TARGET_HEIGHT - 1]])
+VIOLATIONS_FOLDER = "violations"
 
 # Process video and get additional information
-result_info = process_video(SOURCE_VIDEO_PATH, TARGET_VIDEO_PATH, CONFIDENCE_THRESHOLD, IOU_THRESHOLD, MODEL_NAME, MODEL_RESOLUTION, SOURCE, TARGET, TARGET_WIDTH, TARGET_HEIGHT)
+result_info = process_video(SOURCE_VIDEO_PATH, CONFIDENCE_THRESHOLD, IOU_THRESHOLD, MODEL_NAME, MODEL_RESOLUTION, SOURCE, TARGET, TARGET_WIDTH, TARGET_HEIGHT, VIOLATIONS_FOLDER)
 print(result_info)
+
