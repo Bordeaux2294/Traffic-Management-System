@@ -1,4 +1,3 @@
-import ultralytics
 import cv2
 import pandas as pd
 from ultralytics import YOLO
@@ -75,10 +74,11 @@ def process_video():
                         distance1 = 10
                         a_speed_ms1 = distance1 / elapsed1_time
                         a_speed_kh1 = a_speed_ms1 * 3.6
-                        cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
-                        cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)
-                        cv2.putText(frame, str(id), (x3, y3), cv2.FONT_HERSHEY_COMPLEX, 0.6, (255, 255, 255), 1)
-                        cv2.putText(frame, str(int(a_speed_kh1)) + 'Km/h', (x4, y4), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 255, 255), 2)
+                        if a_speed_kh1 > 100:  # Check if speed exceeds 100 km/hr
+                            cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
+                            cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)
+                            cv2.putText(frame, str(id), (x3, y3), cv2.FONT_HERSHEY_COMPLEX, 0.6, (255, 255, 255), 1)
+                            cv2.putText(frame, str(int(a_speed_kh1)) + 'Km/h', (x4, y4), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 255, 255), 2)
 
             if red_line_y < (cy + offset) and red_line_y > (cy - offset):
                 down[id] = time.time()
@@ -90,10 +90,11 @@ def process_video():
                         distance = 10
                         a_speed_ms = distance / elapsed_time
                         a_speed_kh = a_speed_ms * 36
-                        cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
-                        cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)
-                        cv2.putText(frame, str(id), (x3, y3), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
-                        cv2.putText(frame, str(int(a_speed_kh)) + 'Km/h', (x4, y4), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 255), 2)
+                        if a_speed_kh > 60:  # Check if speed exceeds 100 km/hr
+                            cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
+                            cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)
+                            cv2.putText(frame, str(id), (x3, y3), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
+                            cv2.putText(frame, str(int(a_speed_kh)) + 'Km/h', (x4, y4), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 255), 2)
 
         # Write the frame to the output video
         out.write(frame)
