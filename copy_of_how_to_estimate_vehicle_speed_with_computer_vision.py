@@ -1,126 +1,124 @@
-import os
+import ultralytics
 import cv2
-import numpy as np
-import supervision as sv
-
-from tqdm import tqdm
+import pandas as pd
 from ultralytics import YOLO
-from supervision.assets import VideoAssets, download_assets
-from collections import defaultdict, deque
-from datetime import datetime
+from tracker import *
+import time
+import datetime
+import os
 
-def process_video(source_video_path, confidence_threshold, iou_threshold, model_name, model_resolution, source, target, target_width, target_height, violations_folder):
-    # Initialize view transformer
-    class ViewTransformer:
-        def __init__(self, source, target):
-            self.m = cv2.getPerspectiveTransform(source.astype(np.float32), target.astype(np.float32))
+def process_video():
+    model = YOLO('yolov8s.pt')
 
-        def transform_points(self, points):
-            if points.size == 0:
-                return points
-            reshaped_points = points.reshape(-1, 1, 2).astype(np.float32)
-            transformed_points = cv2.perspectiveTransform(reshaped_points, self.m)
-            return transformed_points.reshape(-1, 2)
+    class_list = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
 
-    # Initialize YOLO model
-    model = YOLO(model_name)
+    tracker = Tracker()
+    count = 0
+    down = {}
+    up = {}
+    counter_down = []
+    counter_up = []
 
-    # Get video information
-    video_info = sv.VideoInfo.from_video_path(video_path=source_video_path)
+    cap = cv2.VideoCapture('highway_mini.mp4')
 
-    # Initialize frame generator
-    frame_generator = sv.get_video_frames_generator(source_path=source_video_path)
+    # Create a folder named "violations" if it doesn't exist
+    folder_name = "violations"
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
 
-    # Initialize view transformer
-    view_transformer = ViewTransformer(source=source, target=target)
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'MP4V')  # Codec for the output video
+    output_video_name = os.path.join(folder_name, 'output_video_{}.mp4'.format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+    out = cv2.VideoWriter(output_video_name, fourcc, 20.0, (1020, 500))  # Output video filename, codec, fps, frame size
 
-    # Initialize trackers and annotators
-    byte_track = sv.ByteTrack(frame_rate=video_info.fps, track_thresh=confidence_threshold)
-    thickness = 1
-    text_scale = 1
-    bounding_box_annotator = sv.BoundingBoxAnnotator(thickness=thickness, color_lookup=sv.ColorLookup.TRACK)
-    label_annotator = sv.LabelAnnotator(text_scale=text_scale, text_thickness=thickness, text_position=sv.Position.BOTTOM_CENTER, color_lookup=sv.ColorLookup.TRACK)
-    trace_annotator = sv.TraceAnnotator(thickness=thickness, trace_length=video_info.fps * 2, position=sv.Position.BOTTOM_CENTER, color_lookup=sv.ColorLookup.TRACK)
-    polygon_zone = sv.PolygonZone(polygon=source, frame_resolution_wh=video_info.resolution_wh)
-    coordinates = defaultdict(lambda: deque(maxlen=video_info.fps))
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        count += 1
+        frame = cv2.resize(frame, (1020, 500))
 
-    os.makedirs(violations_folder, exist_ok=True)
+        results = model.predict(frame)
+        a = results[0].boxes.data
+        a = a.detach().cpu().numpy()
+        px = pd.DataFrame(a).astype("float")
 
-    current_time = datetime.now().strftime("%Y%m%d%H%M%S")
-    output_video_path = os.path.join(violations_folder, f"speeding_{current_time}.mp4")
+        list = []
 
-    # Open target video
-    with sv.VideoSink(output_video_path, video_info) as sink:
-        # Loop over source video frames
-        for frame in tqdm(frame_generator, total=video_info.total_frames):
-            result = model(frame, imgsz=model_resolution, verbose=False)[0]
-            detections = sv.Detections.from_ultralytics(result)
+        for index, row in px.iterrows():
+            x1 = int(row[0])
+            y1 = int(row[1])
+            x2 = int(row[2])
+            y2 = int(row[3])
+            d = int(row[5])
+            c = class_list[d]
+            if 'car' in c:
+                list.append([x1, y1, x2, y2])
 
-            # Filter out detections by class and confidence
-            detections = detections[detections.confidence > confidence_threshold]
-            detections = detections[detections.class_id != 0]
+        bbox_id = tracker.update(list)
 
-            # Filter out detections outside the zone
-            detections = detections[polygon_zone.trigger(detections)]
+        for bbox in bbox_id:
+            x3, y3, x4, y4, id = bbox
+            cx = int(x3 + x4) // 2
+            cy = int(y3 + y4) // 2
+            red_line_y = 198
+            blue_line_y = 268
+            offset = 7
 
-            # Refine detections using non-max suppression
-            detections = detections.with_nms(iou_threshold)
+            if blue_line_y < (cy + offset) and blue_line_y > (cy - offset):
+                up[id] = time.time()
+            if id in up:
+                if red_line_y < (cy + offset) and red_line_y > (cy - offset):
+                    elapsed1_time = time.time() - up[id]
+                    if counter_up.count(id) == 0:
+                        counter_up.append(id)
+                        distance1 = 10
+                        a_speed_ms1 = distance1 / elapsed1_time
+                        a_speed_kh1 = a_speed_ms1 * 3.6
+                        cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
+                        cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)
+                        cv2.putText(frame, str(id), (x3, y3), cv2.FONT_HERSHEY_COMPLEX, 0.6, (255, 255, 255), 1)
+                        cv2.putText(frame, str(int(a_speed_kh1)) + 'Km/h', (x4, y4), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 255, 255), 2)
 
-            # Pass detection through the tracker
-            detections = byte_track.update_with_detections(detections=detections)
+            if red_line_y < (cy + offset) and red_line_y > (cy - offset):
+                down[id] = time.time()
+            if id in down:
+                if blue_line_y < (cy + offset) and blue_line_y > (cy - offset):
+                    elapsed_time = time.time() - down[id]
+                    if counter_down.count(id) == 0:
+                        counter_down.append(id)
+                        distance = 10
+                        a_speed_ms = distance / elapsed_time
+                        a_speed_kh = a_speed_ms * 36
+                        cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
+                        cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)
+                        cv2.putText(frame, str(id), (x3, y3), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
+                        cv2.putText(frame, str(int(a_speed_kh)) + 'Km/h', (x4, y4), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 255), 2)
 
-            points = detections.get_anchors_coordinates(anchor=sv.Position.BOTTOM_CENTER)
+        # Write the frame to the output video
+        out.write(frame)
 
-            # Calculate the detections position inside the target RoI
-            points = view_transformer.transform_points(points=points).astype(int)
+        # Display the frame (optional, for visualization)
+        cv2.imshow("frames", frame)
+        if cv2.waitKey(1) & 0xFF == 27:
+            break
 
-            # Store detections position
-            for tracker_id, [_, y] in zip(detections.tracker_id, points):
-                coordinates[tracker_id].append(y)
+    # Release video capture and writer objects
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
 
-            # Format labels
-            labels = []
-            for tracker_id in detections.tracker_id:
-                if len(coordinates[tracker_id]) < video_info.fps / 2:
-                    labels.append(f"#{tracker_id}")
-                else:
-                    coordinate_start = coordinates[tracker_id][-1]
-                    coordinate_end = coordinates[tracker_id][0]
-                    distance = abs(coordinate_start - coordinate_end)
-                    time = len(coordinates[tracker_id]) / video_info.fps
-                    speed = distance / time * 3.6
-                    label_color = sv.Color.red() if speed > 100 else sv.ColorLookup.TRACK
-                    if speed > 100:
-                        labels.append(f"#{tracker_id} {int(speed)} km/h")
-                    else:
-                        labels.append(f"#{tracker_id}")
+    # Return the required information
+    video_name = 'highway_mini.mp4'
+    keyword = 'speed'
+    location = 'Kingston'
+    now = datetime.datetime.now()
+    creation_date = now.strftime("%Y-%m-%d %H:%M:%S")
+    output_video_path = os.path.abspath(output_video_name)
 
-            # Annotate frame
-            annotated_frame = frame.copy()
-            annotated_frame = trace_annotator.annotate(scene=annotated_frame, detections=detections)
-            annotated_frame = bounding_box_annotator.annotate(scene=annotated_frame, detections=detections)
-            annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
-            
-            # Add frame to target video
-            sink.write_frame(annotated_frame)
+    return [video_name, keyword, location, creation_date, output_video_path]
 
-    # Returning the required information
-    info_list = [source_video_path, "speeding", "Kingston", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), output_video_path]
-    return info_list
-
-# Parameters
-SOURCE_VIDEO_PATH = "road3.mp4"
-CONFIDENCE_THRESHOLD = 0.3
-IOU_THRESHOLD = 0.5
-MODEL_NAME = "yolov8x.pt"
-MODEL_RESOLUTION = 1280
-SOURCE = np.array([[290, 0], [0, 700], [1200, 700], [1200, 0]])
-TARGET_WIDTH = 1280
-TARGET_HEIGHT = 700
-TARGET = np.array([[0, 0], [TARGET_WIDTH - 1, 0], [TARGET_WIDTH - 1, TARGET_HEIGHT - 1], [0, TARGET_HEIGHT - 1]])
-VIOLATIONS_FOLDER = "violations"
-
-# Process video and get additional information
-result_info = process_video(SOURCE_VIDEO_PATH, CONFIDENCE_THRESHOLD, IOU_THRESHOLD, MODEL_NAME, MODEL_RESOLUTION, SOURCE, TARGET, TARGET_WIDTH, TARGET_HEIGHT, VIOLATIONS_FOLDER)
-print(result_info)
+# Call the function to process the video and get the information
+video_info = process_video()
+print(video_info)
 
