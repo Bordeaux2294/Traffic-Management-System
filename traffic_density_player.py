@@ -5,24 +5,14 @@ import sv_ttk
 import random
 from PIL import Image, ImageTk
 from datetime import datetime
-import mysql.connector
-from mysql.connector import Error
-from traffictracker import density
-
-class SQLHandler():
-    def __init__(self):      
-        try:
-            self.connection = mysql.connector.connect(host='localhost',
-                                                      database='traffic_watcha',
-                                                      user='root',
-                                                      password='')
-        except Error as e:
-            print("Error while connecting to MySQL", e)
+from traffictracker import TrafficTracker
+from database import SQLHandler
 
 class TrafficApp(ttk.Frame):
     def __init__(self, parent, video_source):
         super().__init__(parent, padding=15)
-        self.connection = SQLHandler().connection
+        self.connection = SQLHandler()
+        self.track = TrafficTracker()
 
         self.video_source = video_source
         self.vid = cv2.VideoCapture(self.video_source)
@@ -48,34 +38,21 @@ class TrafficApp(ttk.Frame):
         # Update text label
         places = ['Kingston','Portmore','St. James', 'St Elizabeth']
         random_index = random.randint(0, len(places) - 1)
+        location = places[random_index]
+        intersection = random.randint(0, 10)
         if self.vid.isOpened() and self.count == 100:
-            val = density(frame)
+            val = self.track.density(frame,location+" " +str(intersection))
             if val > 1:
-               self.text_label.config(background = "red",text="Traffic Level: %.2f HIGH" % val)
+               self.text_label.config(background = "red",text="Traffic Level: %.2f Critical" % val)
                cls = 'high'
             elif val > 0.5:
-               self.text_label.config(background = "yellow",text="Traffic Level: %.2f Danger" % val) 
+               self.text_label.config(background = "yellow",text="Traffic Level: %.2f High" % val) 
                cls = 'danger'
             else:
                self.text_label.config(background = "green", text="Traffic Level: %.2f" % val)
                cls = 'safe'
-            insert_query = f"INSERT INTO density " \
-                            "(density, classification, location, intersection, creation_time) " \
-                           "VALUES (%s, %s, %s, %s, %s)"
-            insert_query2 = f"INSERT INTO temp2 " \
-                            "(density, classification, location, intersection, creation_time) " \
-                           "VALUES (%s, %s, %s, %s, %s)"
-            cursor = self.connection.cursor()
-            vals = [val,cls,places[random_index],random.randint(0, 10),datetime.now()]
-            cursor.execute(insert_query,vals)
-            cursor.execute(insert_query2,vals)
-            self.connection.commit()
-            if val > 1:
-               self.text_label.config(background = "red",text="Traffic Level: %.2f HIGH" % val)
-            elif val > 0.5:
-               self.text_label.config(background = "yellow",text="Traffic Level: %.2f Danger" % val) 
-            else:
-               self.text_label.config(background = "green", text="Traffic Level: %.2f" % val) 
+               vals = [val,cls,location,intersection,datetime.now()]
+               self.connection.add_density(vals)
             self.count = 0
 
 def main(window,video):

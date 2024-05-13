@@ -8,10 +8,9 @@ from PIL import Image, ImageTk
 import cv2
 import tkinter.filedialog
 import shutil  
-import mysql.connector
-from mysql.connector import Error
 import random
 import traffic_density_player
+from database import SQLHandler
 
 
 def generate_thumbnail(video_path, thumbnail_path, frame_num=0):
@@ -37,15 +36,6 @@ def generate_thumbnail_for_video(video_path, thumbnails_folder):
     generate_thumbnail(video_path, thumbnail_path)
     return thumbnail_path
 
-class SQLHandler():
-    def __init__(self):      
-        try:
-            self.connection = mysql.connector.connect(host='localhost',
-                                                      database='traffic_watcha',
-                                                      user='root',
-                                                      password='')
-        except Error as e:
-            print("Error while connecting to MySQL", e)
 
 class ListVideos(ttk.Frame):
     def __init__(self, parent, thumbnail_callback):

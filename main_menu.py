@@ -10,19 +10,8 @@ import speed_detection
 import traffic_density
 import wrong_turn
 import crash_detection
-import mysql.connector
-from mysql.connector import Error
+from database import SQLHandler
 import video_player
-
-class SQLHandler():
-    def __init__(self):      
-        try:
-            self.connection = mysql.connector.connect(host='localhost',
-                                                      database='traffic_watcha',
-                                                      user='root',
-                                                      password='')
-        except Error as e:
-            print("Error while connecting to MySQL", e)
 
 
 class PanedDemo(ttk.PanedWindow):
