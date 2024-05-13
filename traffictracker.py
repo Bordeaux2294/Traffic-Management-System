@@ -1,4 +1,5 @@
 from ultralytics import YOLO
+from email.mime.text import MIMEText
 import smtplib
 import numpy as np
 
@@ -30,26 +31,24 @@ class TrafficTracker():
         vehicles = len(result[0].boxes.cls)
         dens = vehicles/area
         self.dens_list.append(dens)
-        print(self.dens_list)
         if len(self.dens_list) >= 5:
            self.eval()
         return dens
     
     def send(self,msg):
-
-        message = f"""\
-        Subject: Hi NWA
-        To: {self.receiver}
-        From: {self.sender}
-
-        {msg}."""
+        
+        message = MIMEText(msg)
+        message["Subject"] = "Alert!"
+        message["From"] = self.sender
+        message["To"] = self.receiver
 
         with smtplib.SMTP("sandbox.smtp.mailtrap.io", 2525) as server:
             server.starttls()
             server.login("e12deaf9906396", "bc33e62508b697")
-            server.sendmail(self.sender, self.receiver, message)
+            server.sendmail(self.sender, self.receiver, message.as_string())
+            server.quit()
 
-TrafficTracker().send("hello")
+
     
 
     
