@@ -3,8 +3,10 @@ import pandas as pd
 from ultralytics import YOLO
 import cvzone
 import time
+from datetime import datetime
+import os  
 
-def detect_accidents(video_path, output_video_path, model_path='best.pt', class_list_path='coco1.txt'):
+def detect_accidents(video_path, output_video_name, model_path='best.pt', class_list_path='coco1.txt'):
     model = YOLO(model_path)
 
     def RGB(event, x, y, flags, param):
@@ -65,6 +67,7 @@ def detect_accidents(video_path, output_video_path, model_path='best.pt', class_
 
     # Save frames to a video file
     if accident_frames:
+        output_video_path = os.path.abspath(output_video_name)  # Create an absolute file path
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         out = cv2.VideoWriter(output_video_path, fourcc, 3.0, (1020, 500))
         for frame in accident_frames:
@@ -74,6 +77,11 @@ def detect_accidents(video_path, output_video_path, model_path='best.pt', class_
     cap.release()
     cv2.destroyAllWindows()
 
+    # Returning the required information
+    info_list = [video_path, "crash", "Kingston", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), output_video_path]
+    return info_list
+
 # Example usage
-detect_accidents('cr4.mp4', 'accident_clip.mp4')
+result_info = detect_accidents('cr4.mp4', 'accident_clip.mp4')
+print(result_info)
 
