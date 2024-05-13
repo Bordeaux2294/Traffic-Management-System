@@ -1,114 +1,85 @@
 import cv2
-import numpy as np
-import supervision as sv
-
-from tqdm import tqdm
+import pandas as pd
 from ultralytics import YOLO
-from supervision.assets import VideoAssets, download_assets
-from collections import defaultdict, deque
+import cvzone
+import time
+from datetime import datetime
 
-def process_video(source_video_path, target_video_path, confidence_threshold, iou_threshold, model_name, model_resolution, source, target, target_width, target_height):
-    # Initialize view transformer
-    class ViewTransformer:
-        def __init__(self, source, target):
-            self.m = cv2.getPerspectiveTransform(source.astype(np.float32), target.astype(np.float32))
+def detect_accidents(video_path, output_video_path, model_path='best.pt', class_list_path='coco1.txt'):
+    model = YOLO(model_path)
 
-        def transform_points(self, points):
-            if points.size == 0:
-                return points
-            reshaped_points = points.reshape(-1, 1, 2).astype(np.float32)
-            transformed_points = cv2.perspectiveTransform(reshaped_points, self.m)
-            return transformed_points.reshape(-1, 2)
+    def RGB(event, x, y, flags, param):
+        if event == cv2.EVENT_MOUSEMOVE:
+            point = [x, y]
+            print(point)
 
-    # Initialize YOLO model
-    model = YOLO(model_name)
+    cv2.namedWindow('RGB')
+    cv2.setMouseCallback('RGB', RGB)
 
-    # Get video information
-    video_info = sv.VideoInfo.from_video_path(video_path=source_video_path)
+    cap = cv2.VideoCapture(video_path)
 
-    # Initialize frame generator
-    frame_generator = sv.get_video_frames_generator(source_path=source_video_path)
+    my_file = open(class_list_path, "r")
+    data = my_file.read()
+    class_list = data.split("\n")
 
-    # Initialize view transformer
-    view_transformer = ViewTransformer(source=source, target=target)
+    count = 0
+    accident_frames = []
+    accident_detected = False
 
-    # Initialize trackers and annotators
-    byte_track = sv.ByteTrack(frame_rate=video_info.fps, track_thresh=confidence_threshold)
-    thickness = 1
-    text_scale = 1
-    bounding_box_annotator = sv.BoundingBoxAnnotator(thickness=thickness, color_lookup=sv.ColorLookup.TRACK)
-    label_annotator = sv.LabelAnnotator(text_scale=text_scale, text_thickness=thickness, text_position=sv.Position.BOTTOM_CENTER, color_lookup=sv.ColorLookup.TRACK)
-    trace_annotator = sv.TraceAnnotator(thickness=thickness, trace_length=video_info.fps * 2, position=sv.Position.BOTTOM_CENTER, color_lookup=sv.ColorLookup.TRACK)
-    polygon_zone = sv.PolygonZone(polygon=source, frame_resolution_wh=video_info.resolution_wh)
-    coordinates = defaultdict(lambda: deque(maxlen=video_info.fps))
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            continue
 
-    # Open target video
-    with sv.VideoSink(target_video_path, video_info) as sink:
-        # Loop over source video frames
-        for frame in tqdm(frame_generator, total=video_info.total_frames):
-            result = model(frame, imgsz=model_resolution, verbose=False)[0]
-            detections = sv.Detections.from_ultralytics(result)
+        count += 1
+        if count % 3 != 0:
+            continue
+        frame = cv2.resize(frame, (1020, 500))
+        results = model.predict(frame)
+        a = results[0].boxes.data
+        px = pd.DataFrame(a).astype("float")
 
-            # Filter out detections by class and confidence
-            detections = detections[detections.confidence > confidence_threshold]
-            detections = detections[detections.class_id != 0]
+        for index, row in px.iterrows():
+            x1 = int(row[0])
+            y1 = int(row[1])
+            x2 = int(row[2])
+            y2 = int(row[3])
+            d = int(row[5])
+            c = class_list[d]
 
-            # Filter out detections outside the zone
-            detections = detections[polygon_zone.trigger(detections)]
+            if 'accident' in c:
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 1)
+                cvzone.putTextRect(frame, f'{c}', (x1, y1), 1, 1)
+                accident_detected = True
+            else:
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255), 1)
+                cvzone.putTextRect(frame, f'{c}', (x1, y1), 1, 1)
 
-            # Refine detections using non-max suppression
-            detections = detections.with_nms(iou_threshold)
+        if accident_detected:
+            accident_frames.append(frame)
+            if len(accident_frames) >= 15:  # 5 seconds (assuming 3 frames per second)
+                break
 
-            # Pass detection through the tracker
-            detections = byte_track.update_with_detections(detections=detections)
+        if cv2.waitKey(1) & 0xFF == 27:
+            break
 
-            points = detections.get_anchors_coordinates(anchor=sv.Position.BOTTOM_CENTER)
+    # Save frames to a video file
+    if accident_frames:
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        out = cv2.VideoWriter(output_video_path, fourcc, 3.0, (1020, 500))
+        for frame in accident_frames:
+            out.write(frame)
+        out.release()
 
-            # Calculate the detections position inside the target RoI
-            points = view_transformer.transform_points(points=points).astype(int)
+    cap.release()
+    cv2.destroyAllWindows()
 
-            # Store detections position
-            for tracker_id, [_, y] in zip(detections.tracker_id, points):
-                coordinates[tracker_id].append(y)
+    # Returning the required information
+    info_list = ["cr4.mp4", "crash", "Kingston", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "C:\\Users\\chels\\Downloads\\yolov8-vehicle-crash-detection-main\\yolov8-vehicle-crash-detection-main\\accident_clip.mp4"]
+    return info_list
 
-            # Format labels
-            labels = []
-            for tracker_id in detections.tracker_id:
-                if len(coordinates[tracker_id]) < video_info.fps / 2:
-                    labels.append(f"#{tracker_id}")
-                else:
-                    coordinate_start = coordinates[tracker_id][-1]
-                    coordinate_end = coordinates[tracker_id][0]
-                    distance = abs(coordinate_start - coordinate_end)
-                    time = len(coordinates[tracker_id]) / video_info.fps
-                    speed = distance / time * 3.6
-                    label_color = sv.Color.red() if speed > 100 else sv.ColorLookup.TRACK
-                    if speed > 100:
-                        labels.append(f"#{tracker_id} {int(speed)} km/h")
-                    else:
-                        labels.append(f"#{tracker_id}")
-
-            # Annotate frame
-            annotated_frame = frame.copy()
-            annotated_frame = trace_annotator.annotate(scene=annotated_frame, detections=detections)
-            annotated_frame = bounding_box_annotator.annotate(scene=annotated_frame, detections=detections)
-            annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
-
-            # Add frame to target video
-            sink.write_frame(annotated_frame)
-
-# Parameters
-SOURCE_VIDEO_PATH = "road3.mp4"
-TARGET_VIDEO_PATH = "vehicles-result.mp4"
-CONFIDENCE_THRESHOLD = 0.3
-IOU_THRESHOLD = 0.5
-MODEL_NAME = "yolov8x.pt"
-MODEL_RESOLUTION = 1280
-SOURCE = np.array([[290, 0], [0, 700], [1200, 700], [1200, 0]])
-TARGET_WIDTH = 1280
-TARGET_HEIGHT = 700
-TARGET = np.array([[0, 0], [TARGET_WIDTH - 1, 0], [TARGET_WIDTH - 1, TARGET_HEIGHT - 1], [0, TARGET_HEIGHT - 1]])
-
-# Process video
-process_video(SOURCE_VIDEO_PATH, TARGET_VIDEO_PATH, CONFIDENCE_THRESHOLD, IOU_THRESHOLD, MODEL_NAME, MODEL_RESOLUTION, SOURCE, TARGET, TARGET_WIDTH, TARGET_HEIGHT)
+# Example usage
+result_info = detect_accidents('cr4.mp4', 'accident_clip.mp4')
+print(result_info)
 
