@@ -12,6 +12,7 @@
 - check requirements.txt or
 - set up a vritual environment by going 'python -m venv venv'
 - then if on windows, activate by going 'venv\scripts\activate'
+- go 'pip install -r requirements.txt'
 
 
 ### Installation Steps
