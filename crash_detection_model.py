@@ -18,7 +18,12 @@ def detect_accidents(video_path, class_list_path='coco1.txt'):
 
     count = 0
     accident_frames = []
+    before_accident_frames = []
+    after_accident_frames = []
     accident_detected = False
+    duration_before = 0  # Initialize duration before accident
+    duration_after = 0   # Initialize duration after accident
+
 
     while True:
         ret, frame = cap.read()
@@ -52,8 +57,14 @@ def detect_accidents(video_path, class_list_path='coco1.txt'):
 
         if accident_detected:
             accident_frames.append(frame)
-            if len(accident_frames) >= 15:  # 5 seconds (assuming 3 frames per second)
+            duration_after += 1  # Increment the duration after accident
+
+            if duration_before < 4 * 25:  # 4 seconds at 25 fps
+                before_accident_frames.append(frame)
+                duration_before += 1  # Increment the duration before accident
+            elif duration_after >= 3 * 25:  # 3 seconds at 25 fps
                 break
+
 
         if cv2.waitKey(1) & 0xFF == 27:
             break
@@ -69,19 +80,28 @@ def detect_accidents(video_path, class_list_path='coco1.txt'):
     date_time = now.strftime("%Y-%m-%d_%H-%M-%S")
 
     # Output video file path
-    output_video_name = f'output_video_{date_time}.mp4'
-    output_video_path = os.path.join(violations_folder, output_video_name)
-    abs = os.path.abspath(output_video_path)
-    # Write the frames to a video file
-    clip = ImageSequenceClip(accident_frames, fps=25)
-    clip.write_videofile(output_video_path, codec='libx264', ffmpeg_params=['-pix_fmt', 'yuv420p'])
+   # Output video file path
+    output_video_path = os.path.join(violations_folder, f'output_video_{date_time}.mp4')
+
+    # Concatenate frames before and after accident
+    final_frames = before_accident_frames + accident_frames + after_accident_frames
+
+    # Convert frames to RGB and append to the list
+    frames = []
+    for frame in final_frames:
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frames.append(frame_rgb)
+
+    # Write the clip to a video file
+    clip = ImageSequenceClip(frames, fps=25)
+    clip.write_videofile(output_video_path, codec='libx264', ffmpeg_params=['-pix_fmt', 'yuv444p'])
 
 
     # Returning the required information
     places = ['Kingston','Portmore','St. James', 'St Elizabeth']
     random_index = random.randint(0, len(places) - 1)
     info=[]
-    info_list = [output_video_name, "Crash",places[random_index], now, output_video_path]
+    info_list = [f'output_video_{date_time}.mp4', "Crash",places[random_index], now, os.path.abspath(output_video_path)]
     info.append(info_list)
     return info
 

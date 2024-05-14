@@ -13,7 +13,7 @@ class TrafficApp(ttk.Frame):
         self.video_source = video_source
         self.vid = cv2.VideoCapture(self.video_source)
 
-        self.canvas = tk.Canvas(self, width=800, height=800)
+        self.canvas = tk.Canvas(self, width=800, height=500)
         self.canvas.pack()
         self.count = 0
         self.update()

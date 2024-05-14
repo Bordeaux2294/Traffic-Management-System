@@ -8,7 +8,8 @@ import wrong_turn
 import crash_detection
 import video_player
 from database import SQLHandler
-
+from moviepy.editor import VideoFileClip
+import vidtest
 
 class PanedDemo(ttk.PanedWindow):
     def __init__(self, parent):
@@ -114,7 +115,10 @@ class PanedDemo(ttk.PanedWindow):
         item = self.tree.selection()[0]
         idx = int(item)
         clip = self.clips[idx][0]
-        video_player.main(tkinter.Toplevel(self),"violations\\"+clip+".mp4")
+        if  self.clips[idx][1] =="Crash" or self.clips[idx][1] =="Speeding" or self.clips[idx][1] =="Illegal Turn":
+            vidtest.main(tkinter.Toplevel(self),"violations\\"+clip)
+        else:
+            video_player.main(tkinter.Toplevel(self),"violations\\"+clip+".mp4")
 
 
        

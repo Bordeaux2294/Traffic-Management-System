@@ -11,7 +11,7 @@ import mysql.connector
 from mysql.connector import Error
 import random
 from speeding_detection_model import process_video
-import video_player
+import vidtest
 from thumbnailgeneration import *
 
 class SQLHandler():
@@ -205,7 +205,7 @@ class ModelResults(ttk.LabelFrame):
         item = self.tree.selection()[0]
         idx = int(item)
         clip = self.clips[idx][0]
-        video_player.main(tkinter.Toplevel(self),"violations\\"+clip+".mp4")
+        vidtest.main(tkinter.Toplevel(self),"violations\\"+clip)
 
 
 

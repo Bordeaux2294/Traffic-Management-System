@@ -11,7 +11,7 @@ import mysql.connector
 from mysql.connector import Error
 import random
 from crash_detection_model import detect_accidents
-import video_player
+import vidtest
 from thumbnailgeneration import *
 
 class SQLHandler():
@@ -206,7 +206,7 @@ class ModelResults(ttk.LabelFrame):
         idx = int(item)
         clip = self.clips[idx][0]
         print(clip)
-        video_player.main(tkinter.Toplevel(self),"violations\\"+clip+".mp4")
+        vidtest.main(tkinter.Toplevel(self),"violations\\"+clip)
 
 
 
