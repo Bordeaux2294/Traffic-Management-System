@@ -88,20 +88,21 @@ def process_video():
                         distance = 10
                         a_speed_ms = distance / elapsed_time
                         a_speed_kh = a_speed_ms * 36
-                        if a_speed_kh > 60:  # Check if speed exceeds 100 km/hr
+                        if a_speed_kh > 60:  # Check if speed exceeds 60 km/hr
                             cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
                             cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)
                             cv2.putText(frame, str(id), (x3, y3), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
                             cv2.putText(frame, str(int(a_speed_kh)) + 'Km/h', (x4, y4), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 255), 2)
 
-        frames.append(frame)  # Append the processed frame to the list
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB
+        frames.append(frame_rgb)  # Append the processed frame to the list
 
     # Release video capture
     cap.release()
 
-    # Write the processed frames to a video using MoviePy
-    output_video_name = os.path.join(folder_name, 'output_video_{}.mp4'.format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
-    clip = ImageSequenceClip(frames, fps=20)
+    # Write the annotated frames to a video using MoviePy
+    output_video_name = os.path.join(folder_name, 'annotated_video_{}.mp4'.format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+    clip = ImageSequenceClip(frames, fps=30)
     clip.write_videofile(output_video_name, codec='libx264', ffmpeg_params=['-pix_fmt', 'yuv420p'])
 
     cv2.destroyAllWindows()
@@ -116,7 +117,5 @@ def process_video():
 
     return [video_name, keyword, location, creation_date, output_video_path]
 
-# Call the function to process the video and get the information
-video_info = process_video()
-print(video_info)
-
+# Call the function to process the video and
+process_video()
