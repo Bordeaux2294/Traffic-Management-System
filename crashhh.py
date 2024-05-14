@@ -18,7 +18,11 @@ def detect_accidents(video_path, model_path='best.pt', class_list_path='coco1.tx
 
     count = 0
     accident_frames = []
+    before_accident_frames = []
+    after_accident_frames = []
     accident_detected = False
+    duration_before = 0  # Initialize duration before accident
+    duration_after = 0   # Initialize duration after accident
 
     while True:
         ret, frame = cap.read()
@@ -29,6 +33,7 @@ def detect_accidents(video_path, model_path='best.pt', class_list_path='coco1.tx
         count += 1
         if count % 3 != 0:
             continue
+
         frame = cv2.resize(frame, (1020, 500))
         results = model.predict(frame)
         a = results[0].boxes.data
@@ -52,7 +57,12 @@ def detect_accidents(video_path, model_path='best.pt', class_list_path='coco1.tx
 
         if accident_detected:
             accident_frames.append(frame)
-            if len(accident_frames) >= 15:  # 5 seconds (assuming 3 frames per second)
+            duration_after += 1  # Increment the duration after accident
+
+            if duration_before < 4 * 25:  # 4 seconds at 25 fps
+                before_accident_frames.append(frame)
+                duration_before += 1  # Increment the duration before accident
+            elif duration_after >= 3 * 25:  # 3 seconds at 25 fps
                 break
 
         if cv2.waitKey(1) & 0xFF == 27:
@@ -73,18 +83,21 @@ def detect_accidents(video_path, model_path='best.pt', class_list_path='coco1.tx
     # Output video file path
     output_video_path = os.path.join(violations_folder, f'output_video_{date_time}.mp4')
 
+    # Concatenate frames before and after accident
+    final_frames = before_accident_frames + accident_frames + after_accident_frames
+
     # Write the frames to a video file
-    clip = ImageSequenceClip(accident_frames, fps=25)
+    clip = ImageSequenceClip(final_frames, fps=25)
     clip.write_videofile(output_video_path, codec='libx264', ffmpeg_params=['-pix_fmt', 'yuv420p'])
 
     # Return information about the output video
     return [
-    f'output_video_{date_time}.mp4',  # video_name
-    'crash',                           # word
-    'Kingston',                        # location
-    date_time,                         # date_time
-    os.path.abspath(output_video_path) # absolute_file_path
-]
+        f'output_video_{date_time}.mp4',  # video_name
+        'crash',                           # word
+        'Kingston',                        # location
+        date_time,                         # date_time
+        os.path.abspath(output_video_path) # absolute_file_path
+    ]
 
 # Example usage
 output_info = detect_accidents('cr4.mp4')
