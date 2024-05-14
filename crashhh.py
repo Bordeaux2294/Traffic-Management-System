@@ -86,9 +86,15 @@ def detect_accidents(video_path, model_path='best.pt', class_list_path='coco1.tx
     # Concatenate frames before and after accident
     final_frames = before_accident_frames + accident_frames + after_accident_frames
 
-    # Write the frames to a video file
-    clip = ImageSequenceClip(final_frames, fps=25)
-    clip.write_videofile(output_video_path, codec='libx264', ffmpeg_params=['-pix_fmt', 'yuv420p'])
+    # Convert frames to RGB and append to the list
+    frames = []
+    for frame in final_frames:
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frames.append(frame_rgb)
+
+    # Write the clip to a video file
+    clip = ImageSequenceClip(frames, fps=25)
+    clip.write_videofile(output_video_path, codec='libx264', ffmpeg_params=['-pix_fmt', 'yuv444p'])
 
     # Return information about the output video
     return [
