@@ -55,10 +55,10 @@ class PanedDemo(ttk.PanedWindow):
         self.scrollbar.config(command=self.tree.yview)
 
         self.tree.pack(expand=True, fill="both")
-        self.tree.heading("DateTime", text="DateTime")
-        self.tree.heading("Name", text="Name")
-        self.tree.heading("Type", text="Type")
-        self.tree.heading("Location", text="Location")
+        self.tree.heading("DateTime", text="DateTime", command=lambda: self.sort_column("DateTime"))
+        self.tree.heading("Name", text="Name", command=lambda: self.sort_column("Name"))
+        self.tree.heading("Type", text="Type", command=lambda: self.sort_column("Type"))
+        self.tree.heading("Location", text="Location", command=lambda: self.sort_column("Location"))
 
         self.tree.column("DateTime", anchor="w", width=140)
         self.tree.column("Name", anchor="w", width=100)
@@ -76,6 +76,14 @@ class PanedDemo(ttk.PanedWindow):
             self.clips.append((title, type,creation_time, location))
             self.tree.insert("", "end", iid=idx, values=(creation_time, title,type,location))
         self.tree.bind("<Double-1>", self.play_video)
+
+    def sort_column(self, column):
+        """Sort treeview by given column."""
+        data = [(self.tree.set(child, column), child) for child in self.tree.get_children("")]
+        data.sort()
+        for idx, item in enumerate(data):
+            self.tree.move(item[1], "", idx)
+
     def btncmd(self,index):
         match index:
             case 0:
