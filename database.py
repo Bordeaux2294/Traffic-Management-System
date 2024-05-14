@@ -24,3 +24,10 @@ class SQLHandler():
             cursor.execute(insert_query2,value)
             self.connection.commit()
             cursor.close()
+
+    def get_all(self,table):
+        select_query = f"SELECT * FROM {table}"
+        cursor = self.connection.cursor()
+        cursor.execute(select_query)
+        return cursor.fetchall()
+
