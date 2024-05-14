@@ -19,7 +19,7 @@ def process_video():
     counter_down = []
     counter_up = []
 
-    cap = cv2.VideoCapture('highway_mini.mp4')
+    cap = cv2.VideoCapture('road3.mp4')
 
     # Create a folder named "violations" if it doesn't exist
     folder_name = "violations"
@@ -71,8 +71,8 @@ def process_video():
                         counter_up.append(id)
                         distance1 = 10
                         a_speed_ms1 = distance1 / elapsed1_time
-                        a_speed_kh1 = a_speed_ms1 * 3.6
-                        if a_speed_kh1 > 100:  # Check if speed exceeds 100 km/hr
+                        a_speed_kh1 = a_speed_ms1 * 36
+                        if a_speed_kh1 > 60:  # Check if speed exceeds 100 km/hr
                             cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
                             cv2.rectangle(frame, (x3, y3), (x4, y4), (0, 255, 0), 2)
                             cv2.putText(frame, str(id), (x3, y3), cv2.FONT_HERSHEY_COMPLEX, 0.6, (255, 255, 255), 1)
@@ -108,7 +108,7 @@ def process_video():
     cv2.destroyAllWindows()
 
     # Return the required information
-    video_name = 'highway_mini.mp4'
+    video_name = 'road3.mp4'
     keyword = 'speed'
     location = 'Kingston'
     now = datetime.datetime.now()
@@ -117,4 +117,5 @@ def process_video():
 
     return [video_name, keyword, location, creation_date, output_video_path]
 
-process_video()
+# Call the function to process the video and
+print(process_video())
