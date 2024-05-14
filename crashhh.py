@@ -1,3 +1,4 @@
+from moviepy.editor import ImageSequenceClip
 import cv2
 import pandas as pd
 from ultralytics import YOLO
@@ -8,14 +9,6 @@ import os
 
 def detect_accidents(video_path, model_path='best.pt', class_list_path='coco1.txt'):
     model = YOLO(model_path)
-
-    def RGB(event, x, y, flags, param):
-        if event == cv2.EVENT_MOUSEMOVE:
-            point = [x, y]
-            print(point)
-
-    cv2.namedWindow('RGB')
-    cv2.setMouseCallback('RGB', RGB)
 
     cap = cv2.VideoCapture(video_path)
 
@@ -65,27 +58,35 @@ def detect_accidents(video_path, model_path='best.pt', class_list_path='coco1.tx
         if cv2.waitKey(1) & 0xFF == 27:
             break
 
-    # Save frames to a new video file with a timestamp in the filename
-    if accident_frames:
-        output_folder = "violations"
-        os.makedirs(output_folder, exist_ok=True)  # Create the "violations" folder if it doesn't exist
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_video_name = f"accident_clip_{timestamp}.mp4"
-        output_video_path = os.path.abspath(os.path.join(output_folder, output_video_name))  # Create an absolute file path inside the "violations" folder
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter(output_video_path, fourcc, 3.0, (1020, 500))
-        for frame in accident_frames:
-            out.write(frame)
-        out.release()
-
     cap.release()
     cv2.destroyAllWindows()
 
-    # Returning the required information
-    info_list = [video_path, "crash", "Kingston", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), output_video_path]
-    return info_list
+    # Create a folder called "violations" if it doesn't exist
+    violations_folder = "violations"
+    if not os.path.exists(violations_folder):
+        os.makedirs(violations_folder)
+
+    # Get the current date and time
+    now = datetime.now()
+    date_time = now.strftime("%Y-%m-%d_%H-%M-%S")
+
+    # Output video file path
+    output_video_path = os.path.join(violations_folder, f'output_video_{date_time}.mp4')
+
+    # Write the frames to a video file
+    clip = ImageSequenceClip(accident_frames, fps=25)
+    clip.write_videofile(output_video_path, codec='libx264', ffmpeg_params=['-pix_fmt', 'yuv420p'])
+
+    # Return information about the output video
+    return [
+    f'output_video_{date_time}.mp4',  # video_name
+    'crash',                           # word
+    'Kingston',                        # location
+    date_time,                         # date_time
+    os.path.abspath(output_video_path) # absolute_file_path
+]
 
 # Example usage
-result_info = detect_accidents('cr4.mp4')
-print(result_info)
+output_info = detect_accidents('cr4.mp4')
+print(output_info)
 
