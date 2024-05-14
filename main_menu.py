@@ -72,7 +72,7 @@ class PanedDemo(ttk.PanedWindow):
 
         for idx, row in enumerate(rows):
             title, type, creation_time, location = row
-            self.clips.append((title, creation_time, location))
+            self.clips.append((title, type,creation_time, location))
             self.tree.insert("", "end", iid=idx, values=(creation_time, title,type,location))
         self.tree.bind("<Double-1>", self.play_video)
     def btncmd(self,index):

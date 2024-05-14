@@ -5,17 +5,10 @@ import cvzone
 import random
 from datetime import datetime
 import os
+from moviepy.editor import ImageSequenceClip
 
 def detect_accidents(video_path, class_list_path='coco1.txt'):
-    model = YOLO('yolov8n.pt')
-
-    def RGB(event, x, y, flags, param):
-        if event == cv2.EVENT_MOUSEMOVE:
-            point = [x, y]
-            print(point)
-
-    cv2.namedWindow('RGB')
-    cv2.setMouseCallback('RGB', RGB)
+    model = YOLO('best.pt')
 
     cap = cv2.VideoCapture(video_path)
 
@@ -37,7 +30,7 @@ def detect_accidents(video_path, class_list_path='coco1.txt'):
         if count % 3 != 0:
             continue
         frame = cv2.resize(frame, (1020, 500))
-        results = model.predict(frame)
+        results = model.predict(frame, verbose=False)
         a = results[0].boxes.data
         px = pd.DataFrame(a).astype("float")
 
@@ -65,27 +58,30 @@ def detect_accidents(video_path, class_list_path='coco1.txt'):
         if cv2.waitKey(1) & 0xFF == 27:
             break
 
-    # Save frames to a new video file with a timestamp in the filename
-    if accident_frames:
-        output_folder = "violations"
-        os.makedirs(output_folder, exist_ok=True)  # Create the "violations" folder if it doesn't exist
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_video_name = f"accident_clip_{timestamp}.mp4"
-        output_video_path = os.path.abspath(os.path.join(output_folder, output_video_name))  # Create an absolute file path inside the "violations" folder
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter(output_video_path, fourcc, 3.0, (1020, 500))
-        for frame in accident_frames:
-            out.write(frame)
-        out.release()
-
     cap.release()
     cv2.destroyAllWindows()
+    violations_folder = "violations"
+    if not os.path.exists(violations_folder):
+        os.makedirs(violations_folder)
+
+    # Get the current date and time
+    now = datetime.now()
+    date_time = now.strftime("%Y-%m-%d_%H-%M-%S")
+
+    # Output video file path
+    output_video_name = f'output_video_{date_time}.mp4'
+    output_video_path = os.path.join(violations_folder, output_video_name)
+    abs = os.path.abspath(output_video_path)
+    # Write the frames to a video file
+    clip = ImageSequenceClip(accident_frames, fps=25)
+    clip.write_videofile(output_video_path, codec='libx264', ffmpeg_params=['-pix_fmt', 'yuv420p'])
+
 
     # Returning the required information
     places = ['Kingston','Portmore','St. James', 'St Elizabeth']
     random_index = random.randint(0, len(places) - 1)
     info=[]
-    info_list = [output_video_name, "Crash",places[random_index], datetime.now(), output_video_path]
+    info_list = [output_video_name, "Crash",places[random_index], now, output_video_path]
     info.append(info_list)
     return info
 
