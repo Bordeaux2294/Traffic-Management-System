@@ -1,3 +1,4 @@
+from moviepy.editor import ImageSequenceClip
 import cv2
 import pandas as pd
 from ultralytics import YOLO
@@ -25,10 +26,7 @@ def process_video():
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
 
-    # Define the codec and create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*'MP4V')  # Codec for the output video
-    output_video_name = os.path.join(folder_name, 'output_video_{}.mp4'.format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
-    out = cv2.VideoWriter(output_video_name, fourcc, 20.0, (1020, 500))  # Output video filename, codec, fps, frame size
+    frames = []  # List to store frames
 
     while True:
         ret, frame = cap.read()
@@ -51,8 +49,8 @@ def process_video():
             y2 = int(row[3])
             d = int(row[5])
             c = class_list[d]
-            if 'car' in c:
-                list.append([x1, y1, x2, y2])
+            # Removing the condition that filters out only cars
+            list.append([x1, y1, x2, y2])
 
         bbox_id = tracker.update(list)
 
@@ -96,17 +94,16 @@ def process_video():
                             cv2.putText(frame, str(id), (x3, y3), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
                             cv2.putText(frame, str(int(a_speed_kh)) + 'Km/h', (x4, y4), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 255), 2)
 
-        # Write the frame to the output video
-        out.write(frame)
+        frames.append(frame)  # Append the processed frame to the list
 
-        # Display the frame (optional, for visualization)
-        cv2.imshow("frames", frame)
-        if cv2.waitKey(1) & 0xFF == 27:
-            break
-
-    # Release video capture and writer objects
+    # Release video capture
     cap.release()
-    out.release()
+
+    # Write the processed frames to a video using MoviePy
+    output_video_name = os.path.join(folder_name, 'output_video_{}.mp4'.format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+    clip = ImageSequenceClip(frames, fps=20)
+    clip.write_videofile(output_video_name, codec='libx264', ffmpeg_params=['-pix_fmt', 'yuv420p'])
+
     cv2.destroyAllWindows()
 
     # Return the required information
