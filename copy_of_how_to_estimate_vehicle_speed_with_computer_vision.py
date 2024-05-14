@@ -117,5 +117,4 @@ def process_video():
 
     return [video_name, keyword, location, creation_date, output_video_path]
 
-# Call the function to process the video and
 process_video()
