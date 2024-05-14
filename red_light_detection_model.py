@@ -1,8 +1,6 @@
 from ultralytics import YOLO
-import matplotlib.pyplot as plt
 import cv2
 import numpy as np
-import cv2
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from datetime import datetime
 import os

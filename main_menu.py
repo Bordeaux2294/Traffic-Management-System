@@ -1,17 +1,13 @@
 import tkinter
 from tkinter import ttk
 import sv_ttk
-import os
-from tkinter import messagebox
-from moviepy.editor import VideoFileClip  
-import datetime
 import red_light
 import speed_detection
 import traffic_density
 import wrong_turn
 import crash_detection
-from database import SQLHandler
 import video_player
+from database import SQLHandler
 
 
 class PanedDemo(ttk.PanedWindow):
@@ -118,17 +114,7 @@ class PanedDemo(ttk.PanedWindow):
         item = self.tree.selection()[0]
         idx = int(item)
         clip = self.clips[idx][0]
-        print(clip)
         video_player.main(tkinter.Toplevel(self),"violations\\"+clip+".mp4")
-        # messagebox.showinfo("Playing Video", "Click OK to play the video.")
-        
-        # # Create a new window to play the video
-        # play_window = tkinter.Toplevel(self.root)
-        # player = tkinter.Label(play_window)
-        # player.pack()
-        
-        # # Play the video
-        # clip.preview(fps=25, audio=False, viewer=player)
 
 
        

@@ -5,7 +5,6 @@ import os
 from moviepy.editor import VideoFileClip  
 from datetime import datetime
 from PIL import Image, ImageTk
-import cv2
 import tkinter.filedialog
 import shutil  
 import mysql.connector
@@ -13,30 +12,7 @@ from mysql.connector import Error
 import random
 from speeding_detection_model import process_video
 import video_player
-import numpy as np
-
-def generate_thumbnail(video_path, thumbnail_path, frame_num=0):
-    cap = cv2.VideoCapture(video_path)
-    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
-    ret, frame = cap.read()
-    if ret:
-        cv2.imwrite(thumbnail_path, frame)
-    cap.release()
-
-def generate_thumbnails_for_folder(folder_path, thumbnails_folder):
-    if not os.path.exists(thumbnails_folder):
-        os.makedirs(thumbnails_folder)
-    video_files = [f for f in os.listdir(folder_path) if f.endswith((".mp4", ".avi", ".mkv"))]
-    for video_file in video_files:
-        video_path = os.path.join(folder_path, video_file)
-        thumbnail_path = os.path.join(thumbnails_folder, os.path.splitext(video_file)[0] + ".jpeg")
-        generate_thumbnail(video_path, thumbnail_path)
-
-def generate_thumbnail_for_video(video_path, thumbnails_folder):
-    video_name = os.path.splitext(os.path.basename(video_path))[0]
-    thumbnail_path = os.path.join(thumbnails_folder, video_name + ".jpeg")
-    generate_thumbnail(video_path, thumbnail_path)
-    return thumbnail_path
+from thumbnailgeneration import *
 
 class SQLHandler():
     def __init__(self):      
@@ -151,15 +127,7 @@ class VideoThumbnail(ttk.LabelFrame):
             if os.path.basename(self.video_path) == os.path.splitext(video_file)[0]:
                 video = video_file
         if video is not None:
-           CONFIDENCE_THRESHOLD = 0.3
-           IOU_THRESHOLD = 0.5
-           MODEL_RESOLUTION = 1280
-           SOURCE = np.array([[290, 0], [0, 700], [1200, 700], [1200, 0]])
-           TARGET_WIDTH = 1280
-           TARGET_HEIGHT = 700
-           TARGET = np.array([[0, 0], [TARGET_WIDTH - 1, 0], [TARGET_WIDTH - 1, TARGET_HEIGHT - 1], [0, TARGET_HEIGHT - 1]])
-           VIOLATIONS_FOLDER = "violations"
-           results = process_video("videos\\"+video,video,CONFIDENCE_THRESHOLD,IOU_THRESHOLD,MODEL_RESOLUTION,SOURCE, TARGET,TARGET_WIDTH, TARGET_HEIGHT,VIOLATIONS_FOLDER)
+           results = process_video("videos\\"+video)
            for r in results:
                 insert_query = f"INSERT INTO violations " \
                            "(title, type, location, creation_time, file_path) " \
