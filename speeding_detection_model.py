@@ -10,7 +10,7 @@ import random
 def process_video(video_source):
     model = YOLO('yolov8s.pt')
 
-    class_list = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+    class_list = ['bicycle', 'car', 'motorcycle', 'bus', 'truck']
 
     tracker = Tracker()
     count = 0
@@ -53,8 +53,7 @@ def process_video(video_source):
             y2 = int(row[3])
             d = int(row[5])
             c = class_list[d]
-            if 'car' in c:
-                list.append([x1, y1, x2, y2])
+            list.append([x1, y1, x2, y2])
 
         bbox_id = tracker.update(list)
 
