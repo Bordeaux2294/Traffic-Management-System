@@ -181,7 +181,7 @@ class ModelResults(ttk.LabelFrame):
             yscrollcommand=self.scrollbar.set,
         )
         self.scrollbar.config(command=self.tree.yview)
-
+        
         self.tree.pack(expand=True, fill="both")
         self.tree.heading("Title", text="Title")
         self.tree.heading("Datetime", text="Datetime")

@@ -44,7 +44,7 @@ class TrafficApp(ttk.Frame):
             if val > 1:
                self.text_label.config(background = "red",text="Traffic Level: %.2f Critical" % val)
             elif val > 0.5:
-               self.text_label.config(background = "yellow",text="Traffic Level: %.2f High" % val) 
+               self.text_label.config(background = "yellow",foreground='black',text="Traffic Level: %.2f High" % val) 
             else:
                self.text_label.config(background = "green", text="Traffic Level: %.2f" % val)
             self.count = 0
