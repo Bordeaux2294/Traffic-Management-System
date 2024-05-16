@@ -17,7 +17,6 @@
 
 ### Installation Steps
 - get the code from github
-- make 3 folders titled 'thumbnails','videos','violations'
 - thumbnails is where the generated thumbnails forr the videos will go, videos is where the source videos for the  models will be loaded in from and violations should be where the results from the models will show 
 - source videos should only be popluated from the load video button as that is how they will enter the database
 - run database_setup.py first
