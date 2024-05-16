@@ -1,3 +1,5 @@
 venv/
-
+violations/
+thumbnails/
+videos/
 __pycache__/

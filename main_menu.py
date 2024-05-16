@@ -10,6 +10,12 @@ import video_player
 from database import SQLHandler
 from moviepy.editor import VideoFileClip
 import vidtest
+import os
+
+# Ensure directories exist
+os.makedirs('thumbnails', exist_ok=True)
+os.makedirs('videos', exist_ok=True)
+os.makedirs('violations', exist_ok=True)
 
 class PanedDemo(ttk.PanedWindow):
     def __init__(self, parent):
