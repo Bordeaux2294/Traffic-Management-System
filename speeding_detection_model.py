@@ -53,8 +53,7 @@ def process_video(video_source):
             y2 = int(row[3])
             d = int(row[5])
             c = class_list[d]
-            if 'car' in c:
-                list.append([x1, y1, x2, y2])
+            list.append([x1, y1, x2, y2])
 
         bbox_id = tracker.update(list)
 
