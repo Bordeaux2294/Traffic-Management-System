@@ -10,7 +10,7 @@ import shutil
 import mysql.connector
 from mysql.connector import Error
 import random
-from wrong_turn_model import detect_turn
+from wrong_turn_model import detect_wrong_turn
 import vidtest
 from thumbnailgeneration import *
 
@@ -128,7 +128,7 @@ class VideoThumbnail(ttk.LabelFrame):
                 video = video_file
         if video is not None:
            
-           results = detect_turn("videos\\"+video)
+           results = detect_wrong_turn("videos\\"+video)
            for r in results:
                 insert_query = f"INSERT INTO violations " \
                            "(title, type, location, creation_time, file_path) " \
